@@ -1,5 +1,5 @@
 from aocd import get_data # type: ignore
-from typing import Tuple, List, Set
+from typing import Tuple, List
 
 Interval = Tuple[int, int]
 
