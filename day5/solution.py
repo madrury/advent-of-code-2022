@@ -40,7 +40,7 @@ def parse_stacks(stackitr: Iterable[str]) -> Stacks:
     stacks: Stacks = [[] for _ in range(N_STACKS)]
     for line in stackstrs[::-1]:
         tokens = split(line, splitlen=N_CHARS_IN_BOX_TOKEN)
-        boxes = [t.strip('[] ') for t in tokens]
+        boxes: List[BoxId] = [t.strip('[] ') for t in tokens]
         for box, stack in zip(boxes, stacks):
             if box: stack.append(box)
     return stacks
