@@ -65,12 +65,12 @@ def score_viewing_distance_from_position(trees: TreePlot, p: Position) -> int:
         * viewing_distance(below, height)
     )
 
-def score_viewing_distance_from_each_position(trees: List[List[int]]) -> Dict[Position, int]:
+def score_viewing_distance_from_each_position(trees: TreePlot) -> Dict[Position, int]:
     N, M = len(trees), len(trees[0])
-    counts = {}
+    scores = {}
     for i, j in product(range(N), range(M)):
-            counts[i, j] = score_viewing_distance_from_position(trees, (i, j))
-    return counts
+        scores[i, j] = score_viewing_distance_from_position(trees, (i, j))
+    return scores
 
 
 if __name__ == '__main__':
