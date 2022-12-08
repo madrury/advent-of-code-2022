@@ -42,6 +42,8 @@ def build_filesystem(data: str) -> List[FileSystemObject]:
     next(lines) # First command of `cd /` can be discarded.`
 
     for line in lines:
+
+        # First parse the command.
         if line.startswith('$'):
             readstate = ReaderState.COMMAND
             command, arg = parse_command(line)
@@ -52,6 +54,7 @@ def build_filesystem(data: str) -> List[FileSystemObject]:
             readstate = ReaderState.LISTINGFILE
             size, name = parse_file_listing(line)
 
+        # Then update the filesystem state.
         if readstate == ReaderState.COMMAND and command == Command.CHANGEDIR:
             if arg == '..':
                 workingdir = workingdir.parent
