@@ -34,7 +34,7 @@ class Command(Enum):
     CHANGEDIR = 1
 
 
-def build_filesystem(data: str) -> List[FileSystemObject]:
+def build_filesystem(data: str) -> Directory:
     root = workingdir = Directory('/', parent=None)
     readstate = ReaderState.COMMAND
     lines = iter(data.split('\n'))
