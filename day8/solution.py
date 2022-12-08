@@ -33,12 +33,6 @@ def visible_1d(row: TreeRow) -> List[bool]:
     visible = [vfl or vfr for vfl, vfr in zip(visiblefromleft, visiblefromright)]
     return visible
 
-def viewing_distance(row: TreeRow, height: int) -> int:
-    for idx, h in enumerate(row):
-        if h >= height:
-            return idx + 1
-    return len(row)
-
 def visible_rowwise(trees: TreePlot) -> List[List[bool]]:
     return [visible_1d(row) for row in trees]
 
@@ -50,6 +44,12 @@ def visible_from_edges(trees: TreePlot) -> List[List[bool]]:
         [rwv or cwv for rwv, cwv in zip(rwrow, cwrow)]
         for rwrow, cwrow in zip(rowwise, colwise)
     ]
+
+def viewing_distance(row: TreeRow, height: int) -> int:
+    for idx, h in enumerate(row):
+        if h >= height:
+            return idx + 1
+    return len(row)
 
 def score_viewing_distance_from_position(trees: TreePlot, p: Position) -> int:
     N, M = len(trees), len(trees[0])
