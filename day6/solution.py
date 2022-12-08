@@ -4,7 +4,7 @@ from collections import deque
 
 Position = int
 
-def find_repeats(data: str, markerlen: int) -> Optional[Position]:
+def find_sop_marker_position(data: str, markerlen: int) -> Optional[Position]:
     buffer: deque[str] = deque(data[:markerlen], maxlen=markerlen)
     for idx, chr in enumerate(data, start=markerlen):
         buffer.append(chr)
@@ -15,8 +15,8 @@ def find_repeats(data: str, markerlen: int) -> Optional[Position]:
 if __name__ == '__main__':
     data = get_data(day=6, year=2022)
 
-    soppos = find_repeats(data, markerlen=4)
+    soppos = find_sop_marker_position(data, markerlen=4)
     print(f"The first start-of-packet marker for length 4 packets is at position {soppos}")
 
-    soppos = find_repeats(data, markerlen=14)
+    soppos = find_sop_marker_position(data, markerlen=14)
     print(f"The first start-of-packet marker for length 14 packets is at position {soppos}")
