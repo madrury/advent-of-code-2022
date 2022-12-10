@@ -56,7 +56,6 @@ class Machine:
         self.program = program
         self._ixptr = 0
         self.x = 1
-        self.cycle = 0
         self.signal: List[int] = []
         self.crt = CRT()
 
@@ -67,15 +66,14 @@ class Machine:
     def tick(self, ix: Instruction):
         self.crt.render(spritepos=self.x)
         self.crt.tick()
+        self.signal.append(self.x)
         match ix.tick(), ix:
             case Signal.BLOCKING, _:
-                self.signal.append(self.x)
+                pass
             case Signal.FINISHED, Add(dx, _):
-                self.signal.append(self.x)
                 self.x += dx
                 self._ixptr += 1
             case Signal.FINISHED, NoOp(_):
-                self.signal.append(self.x)
                 self._ixptr += 1
 
     def signal_strength(self, idxs: List[int]) -> int:
