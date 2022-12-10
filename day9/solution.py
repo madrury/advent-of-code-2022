@@ -72,24 +72,10 @@ class Knot:
         # They're still touching.
         if max(abs(positionΔ[0]), abs(positionΔ[1])) <= 1:
             return
-        # Directly left or right.
-        elif abs(positionΔ[0]) > 1 and positionΔ[1] == 0:
-            self.move_to((
-                leader.position[0] - sign(positionΔ[0]),
-                leader.position[1]
-            ))
-        # Directly above or below.
-        elif abs(positionΔ[1]) > 1 and positionΔ[0] == 0:
-            self.move_to((
-                leader.position[0],
-                leader.position[1] - sign(positionΔ[1]),
-            ))
-        # Nither directly vertical or horizontal: move once diagonally.
-        else:
-            self.move_to((
-                self.position[0] + sign(positionΔ[0]),
-                self.position[1] + sign(positionΔ[1])
-            ))
+        self.move_to((
+            self.position[0] + sign(positionΔ[0]),
+            self.position[1] + sign(positionΔ[1])
+        ))
 
 def parse_data(data: str) -> List[Move]:
     return to_single_moves([
