@@ -88,16 +88,10 @@ def to_single_moves(moves: List[Move]) -> List[Move]:
         flatmoves.extend([Move(move.direction, 1) for _ in range(move.times)])
     return flatmoves
 
-def move_rope(head: Knot, tail: Knot, moves: List[Move]):
-    for move in moves:
-        head.move(move)
-        tail.follow(head)
-
-def move_multirope(rope: List[Knot], moves: List[Move]):
+def move_rope(rope: List[Knot], moves: List[Move]):
     for move in moves:
         rope[0].move(move)
         for head, tail in pairwise(rope):
-            # while not head.is_touching(tail):
             tail.follow(head)
 
 
@@ -105,12 +99,12 @@ if __name__ == '__main__':
     data = get_data(day=9, year=2022)
     moves = parse_data(data)
 
-    head, tail = Knot(0, 0), Knot(0, 0)
-    move_rope(head, tail, moves)
-    n_visited_tail = len(set(tail.history))
+    rope = [Knot(0, 0), Knot(0, 0)]
+    move_rope(rope, moves)
+    n_visited_tail = len(set(rope[-1].history))
     print(f"The number of positions visited by the tail is {n_visited_tail}")
 
-    multirope = [Knot(0, 0) for _ in range(10)]
-    move_multirope(multirope, moves)
-    n_visited_tail = len(set(multirope[-1].history))
+    rope = [Knot(0, 0) for _ in range(10)]
+    move_rope(rope, moves)
+    n_visited_tail = len(set(rope[-1].history))
     print(f"The number of positions visited by the tail is {n_visited_tail}")
