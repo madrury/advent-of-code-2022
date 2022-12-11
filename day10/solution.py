@@ -1,14 +1,17 @@
 from aocd import get_data # type: ignore
 from enum import Enum
 from dataclasses import dataclass
-from itertools import pairwise
-from typing import List, Tuple
+from typing import List
+
 
 class Signal(Enum):
     FINISHED = 0
     BLOCKING = 1
 
+@dataclass
 class Instruction:
+    counter: int = 0
+
     def tick(self) -> Signal:
         self.counter -= 1
         if self.counter == 0:
@@ -21,7 +24,7 @@ class NoOp(Instruction):
 
 @dataclass
 class Add(Instruction):
-    dx: int
+    dx: int = 0
     counter: int = 2
 
 Program = List[Instruction]
