@@ -121,15 +121,7 @@ def monkeys() -> Dict[MonkeyId, Monkey]:
         ),
     }
 
-def multilcm(ns: List[int]) -> int:
-    m = 1
-    for n in ns:
-        m = lcm(m, n)
-    return m
-
-#WORRY_MODULUS_LCM = multilcm([11, 3, 5, 7, 19, 2, 13, 17])
 WORRY_MODULUS_LCM = 11 * 3 * 5 * 7 * 19 * 2 * 13 * 17
-print("LCM: ", WORRY_MODULUS_LCM)
 
 class MonkeyBusiness:
 
