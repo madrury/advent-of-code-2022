@@ -10,7 +10,6 @@ class Signal(Enum):
 
 @dataclass
 class Instruction:
-    counter: int = 0
 
     def tick(self) -> Signal:
         self.counter -= 1
@@ -67,6 +66,7 @@ class Machine:
             self.tick(self.program[self._ixptr])
 
     def tick(self, ix: Instruction):
+        print(ix)
         self.crt.render(spritepos=self.x)
         self.crt.tick()
         self.signal.append(self.x)
@@ -91,8 +91,8 @@ def parse_data(data: str) -> Program:
                 program.append(NoOp())
             case 'addx', n:
                 program.append(Add(int(n)))
-            case x:
-                print(x)
+            case _:
+                pass
     return program
 
 
