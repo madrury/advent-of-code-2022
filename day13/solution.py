@@ -1,12 +1,11 @@
 
 from aocd import get_data # type: ignore
 from enum import Enum
-from itertools import chain, pairwise
 from functools import cmp_to_key
 from typing import Union, List, Tuple
 
 
-Packet = List[Union[int, List['Value']]]
+Packet = List[Union[int, List['Packet']]]
 
 DIVIDER2 = [[2]]
 DIVIDER6 = [[6]]
@@ -27,12 +26,12 @@ def parse_data(data: str) -> List[Tuple[Packet, Packet]]:
         else:
             pairs.append((left, right))
             left, right = None, None
-    # You'll miss the last one.
+    # You'll miss the last one, dumbass. 👎
     pairs.append((left, right))
     return pairs
 
 def to_packet_list(pairs: List[Tuple[Packet, Packet]]) -> List[Packet]:
-    plist = [ [[2]], [[6]] ]
+    plist = [DIVIDER2, DIVIDER6]
     for left, right in pairs:
         plist.append(left)
         plist.append(right)
@@ -93,8 +92,6 @@ if __name__ == '__main__':
     print(f"The index sum of the ordered pairs is {idxsum}")
 
     packets = to_packet_list(pairs)
-    print_packet_list(packets)
-
     packets = sorted(to_packet_list(pairs), key=cmp_to_key(compare_key))
 
     for left, right in [(packets[i], packets[i+1]) for i in range(len(packets) - 1)]:
