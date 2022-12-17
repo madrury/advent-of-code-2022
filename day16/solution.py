@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass
-from itertools import chain, combinations
+from operator import itemgetter
 from aocd import get_data # type: ignore
-from typing import Union, List, Set, Dict, Tuple, Optional, FrozenSet
+from typing import List, Dict, Tuple, FrozenSet
 
 ValveName = str
 Pressure = int
@@ -68,10 +68,12 @@ def search(
     valves: Dict[ValveName, WeightedValve],
     current: ValveName,
     remaining: Duration,
-    open_valves: FrozenSet[ValveName]
-) -> Pressure:
-    if remaining <= 0:
-        return 0
+    open_valves: FrozenSet[ValveName],
+    stop_remaining: int = 0
+) -> Tuple[Pressure, FrozenSet[ValveName]]:
+
+    if remaining <= stop_remaining:
+        return 0, open_valves
 
     remaining_closed_with_flow = {
         nm for nm, valve in valves.items()
@@ -81,36 +83,45 @@ def search(
     pressure = valves[current].rate * (remaining - 1)
     match len(remaining_closed_with_flow):
         case 0:
-            return 0
+            return 0, open_valves
         case 1:
-            return pressure
+            return pressure, open_valves | {current}
 
-    return pressure +  max(
+    tails: List[Tuple[Pressure, FrozenSet[ValveName]]] = [
         search(
             valves,
             nextnm,
             remaining - (current != 'AA') - valves[current].tunnels[nextnm],
-            open_valves | {current}
+            open_valves | {current},
+            stop_remaining
         )
         for nextnm in remaining_closed_with_flow - {current}
-    )
+    ]
+    best = max(tails, key=itemgetter(0))
+    return (pressure + best[0], best[1])
+
 
 if __name__ == '__main__':
     data = get_data(day=16, year=2022)
-#     data = """
-# Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
-# Valve BB has flow rate=13; tunnels lead to valves CC, AA
-# Valve CC has flow rate=2; tunnels lead to valves DD, BB
-# Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
-# Valve EE has flow rate=3; tunnels lead to valves FF, DD
-# Valve FF has flow rate=0; tunnels lead to valves EE, GG
-# Valve GG has flow rate=0; tunnels lead to valves FF, HH
-# Valve HH has flow rate=22; tunnel leads to valve GG
-# Valve II has flow rate=0; tunnels lead to valves AA, JJ
-# Valve JJ has flow rate=21; tunnel leads to valve II
-#     """.strip()
     valves = parse_data(data)
     wvalves = to_weighted_valves(valves)
 
-    steamyest = search(wvalves, 'AA', 30, frozenset())
-    print(f"Without an elephant, you release {steamyest}")
+    # No 🐘.
+    released, _ = search(wvalves, 'AA', 30, frozenset())
+    print(f"Without an elephant, you release {released}")
+
+    # With 🐘.
+    released = []
+    for stop_time in range(0, 27):
+        mereleased, meopened = search(wvalves, 'AA', 26, frozenset(), stop_time)
+        elereleased, eleopened = search(wvalves, 'AA', 26, meopened)
+        totalreleased = mereleased + elereleased
+        released.append(totalreleased)
+        print("Stop time: ", stop_time, "Total Released: ", totalreleased)
+        print(f"    I released {mereleased} by opening valves {meopened}")
+        print(f"    They released {elereleased} by opening valves {eleopened - meopened}")
+    maxreleased = max(released)
+
+    print(f"With an elephant, we release {maxreleased}")
+
+
