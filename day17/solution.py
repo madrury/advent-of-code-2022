@@ -10,6 +10,8 @@ Direction = Literal['<', '>']
 
 class Piece:
 
+    width = 0
+
     def __init__(self, position: Coord = (0, 0)):
         self.position = position
 
@@ -22,29 +24,30 @@ class Piece:
         pass
 
     def move_left(self, cave: Cave) -> Optional['Piece']:
-        if self.is_unblocked(cave, (-1, 0)):
+        within_bounds = (self.position[0] >= 1)
+        if (within_bounds and self.position[1] > cave.top) or (within_bounds and self.is_unblocked(cave, (-1, 0))):
             self.position = (self.position[0] - 1, self.position[1])
-            return self
-        return None
+        return self
 
     def move_right(self, cave: Cave):
-        if self.is_unblocked(cave, (1, 0)):
+        within_bounds = (self.position[0] + self.width + 1 <= 6)
+        if (within_bounds and self.position[1] > cave.top) or (within_bounds and self.is_unblocked(cave, (1, 0))):
             self.position = (self.position[0] + 1, self.position[1])
-            return self
-        return None
+        return self
 
     def move_down(self, cave: Cave):
-        if self.is_unblocked(cave, (0, -1)):
+        if (self.position[1] > cave.top + 1) or self.is_unblocked(cave, (0, -1)):
             self.position = (self.position[0], self.position[1] - 1)
             return self
         return None
 
-    @abstractmethod
     def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        pass
+            return all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
 
 
 class FlatPiece(Piece):
+
+    width = 3
 
     @property
     def blocks(self) -> Iterable[Coord]:
@@ -57,14 +60,10 @@ class FlatPiece(Piece):
     def top(self) -> int:
         return self.position[1]
 
-    def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        return (
-            self.position[0] + offset[0] >= 0
-            and self.position[0] + offset[0] + 3 <= 6
-            and all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
-        )
 
 class CrossPiece(Piece):
+
+    width = 2
 
     @property
     def blocks(self) -> Iterable[Coord]:
@@ -78,14 +77,10 @@ class CrossPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 2
 
-    def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        return (
-            self.position[0] + offset[0] >= 0
-            and self.position[0] + offset[0] + 2 <= 6
-            and all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
-        )
 
 class ElPiece(Piece):
+
+    width = 2
 
     @property
     def blocks(self) -> Iterable[Coord]:
@@ -99,14 +94,10 @@ class ElPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 2
 
-    def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        return (
-            self.position[0] + offset[0] >= 0
-            and self.position[0] + offset[0] + 2 <= 6
-            and all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
-        )
 
 class TallPiece(Piece):
+
+    width = 0
 
     @property
     def blocks(self) -> Iterable[Coord]:
@@ -119,14 +110,10 @@ class TallPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 3
 
-    def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        return (
-            self.position[0] + offset[0] >= 0
-            and self.position[0] + offset[0] <= 6
-            and all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
-        )
 
 class SquarePiece(Piece):
+
+    width = 1
 
     @property
     def blocks(self) -> Iterable[Coord]:
@@ -139,12 +126,6 @@ class SquarePiece(Piece):
     def top(self) -> int:
         return self.position[1] + 1
 
-    def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
-        return (
-            self.position[0] + offset[0] >= 0
-            and self.position[0] + offset[0] + 1 <= 6
-            and all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
-        )
 
 class Cave:
 
@@ -169,8 +150,8 @@ class Cave:
 
     def cascade(self, pieces: Iterable[Piece], directions: Iterable[Direction]):
         for n, piece in enumerate(pieces):
-            if n % 1_000_000 == 0:
-                self.gc()
+            # if n % 100_000 == 0:
+            #     self.gc()
             if n % 10_000 == 0:
                 print('.', end='', flush=True)
             piece.position = (2, self.top + 4)
@@ -184,19 +165,13 @@ class Cave:
         while True:
             match next(directions):
                 case '<':
-                    nextpiece = piece.move_left(self)
+                    piece.move_left(self)
                 case '>':
-                    nextpiece = piece.move_right(self)
+                    piece.move_right(self)
                 case _:
                     raise ValueError(f"Unknown direction.")
-            if nextpiece:
-                piece = nextpiece
 
-            nextpiece = piece.move_down(self)
-            if nextpiece:
-                piece = nextpiece
-                continue
-            else:
+            if not piece.move_down(self):
                 break
 
         return piece
@@ -206,8 +181,8 @@ if __name__ == '__main__':
     data = get_data(day=17, year=2022)
 
     PIECES = [FlatPiece(), CrossPiece(), ElPiece(), TallPiece(), SquarePiece()]
-    pieces = islice(cycle(PIECES), 0, 2022)
-    directions = cycle('>>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>')
+    pieces = islice(cycle(PIECES), 0, 1_000_000)
+    # directions = cycle('>>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>')
     directions = cycle(data.strip())
 
     cave = Cave()
