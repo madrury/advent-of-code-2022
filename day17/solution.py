@@ -1,10 +1,14 @@
 from aocd import get_data # type: ignore
 from abc import ABC, abstractmethod, abstractproperty
+from dataclasses import dataclass
 from itertools import cycle, islice
-from typing import Tuple, Set, Optional, Iterable, Literal, Type
+from typing import Tuple, Set, Optional, Iterable, Literal, Dict
+from math import lcm
+import numpy as np
 
 Coord = Tuple[int, int]
 Cave = int
+Height = int
 Direction = Literal['<', '>']
 
 
@@ -44,7 +48,6 @@ class Piece:
     def is_unblocked(self, cave: Cave, offset: Coord) -> bool:
             return all((block[0] + offset[0], block[1] + offset[1]) not in cave.blocks for block in self.blocks)
 
-
 class FlatPiece(Piece):
 
     width = 3
@@ -60,6 +63,9 @@ class FlatPiece(Piece):
     def top(self) -> int:
         return self.position[1]
 
+    @property
+    def tops(self) -> np.array:
+        return np.full(4, self.position[1])
 
 class CrossPiece(Piece):
 
@@ -77,6 +83,9 @@ class CrossPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 2
 
+    @property
+    def tops(self) -> np.array:
+        return np.full(3, self.position[1]) + np.array([1, 2, 1])
 
 class ElPiece(Piece):
 
@@ -94,6 +103,9 @@ class ElPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 2
 
+    @property
+    def tops(self) -> np.array:
+        return np.full(3, self.position[1]) + np.array([0, 0, 2])
 
 class TallPiece(Piece):
 
@@ -110,6 +122,9 @@ class TallPiece(Piece):
     def top(self) -> int:
         return self.position[1] + 3
 
+    @property
+    def tops(self) -> np.array:
+        return np.array([self.position[1] + 3])
 
 class SquarePiece(Piece):
 
@@ -126,65 +141,95 @@ class SquarePiece(Piece):
     def top(self) -> int:
         return self.position[1] + 1
 
+    @property
+    def tops(self) -> np.array:
+        return np.full(2, self.position[1] + 1)
+
 
 class Cave:
 
-    def __init__(self):
+    def __init__(self, n_pieces: int, n_wind: int):
+        self.n_pieces = n_pieces
+        self.n_wind = n_wind
+
         self.blocks: Set[Coord] = {
             (x, -1) for x in range(0, 7)
         }
-        self.top = -1
 
-    def gc(self):
-        yidx = self.top
-        while True:
-            if all((xidx, yidx) in self.blocks for xidx in range(0, 7)):
-                break
-            yidx -= 1
-        self.blocks = {
-            block for block in self.blocks if block[1] >= yidx
-        }
+        self.top = -1
+        self.tops = np.full(7, -1)
+        self.cycle: Dict[Tuple[int, int, np.array], Tuple[int, int]] = {}
 
     def add(self, piece: Piece):
         self.blocks.update(piece.blocks)
 
-    def cascade(self, pieces: Iterable[Piece], directions: Iterable[Direction]):
-        for n, piece in enumerate(pieces):
+    def cascade(self, pieces: Iterable[Piece], directions: Iterable[Tuple[int, Direction]], check_cycles=True):
+        for pieceidx, piece in enumerate(pieces):
             # if n % 100_000 == 0:
             #     self.gc()
-            if n % 10_000 == 0:
-                print('.', end='', flush=True)
+            # if n % 10_000 == 0:
+            #     print('.', end='', flush=True)
             piece.position = (2, self.top + 4)
-            final = self.drop(piece, directions)
+            windidx, final = self.drop(piece, directions)
             self.add(final)
             self.top = max(self.top, final.top)
-            # print(f"{final.__class__.__name__} rests at {final.position}")
-            # print(f"Blocks: {self.blocks}")
+            # print("Piece tops:", final.tops)
+            self.tops[final.position[0]:(final.position[0] + final.width + 1)] = final.tops
 
-    def drop(self, piece: Piece, directions: Iterable[Direction]) -> Piece:
+            cycle_id = (pieceidx % self.n_pieces, windidx % self.n_wind, tuple(np.diff(self.tops)))
+            if check_cycles and cycle_id in self.cycle:
+                print(f"Cycle detected at {pieceidx=} and {windidx=}!")
+                print(f"Cycle id:", cycle_id)
+                previous_height, previous_pieceidx = self.cycle[cycle_id]
+                cycle_length = pieceidx - previous_pieceidx
+                height_increase = self.top - previous_height
+                print(f"Cycle started at: {previous_pieceidx}")
+                print(f"Cycle Length: {cycle_length}")
+                print(f"Height at start of cycle: {previous_height}")
+                print(f"Height increase per cycle: {height_increase}")
+                return height_increase, cycle_length, previous_pieceidx, previous_height
+            self.cycle[cycle_id] = (self.top, pieceidx)
+
+    def drop(self, piece: Piece, directions: Iterable[Tuple[int, Direction]]) -> Piece:
         while True:
             match next(directions):
-                case '<':
+                case n, '<':
                     piece.move_left(self)
-                case '>':
+                case n, '>':
                     piece.move_right(self)
-                case _:
-                    raise ValueError(f"Unknown direction.")
+                case x:
+                    raise ValueError(f"Unknown direction {x}.")
 
             if not piece.move_down(self):
                 break
 
-        return piece
+        return n, piece
 
 
 if __name__ == '__main__':
-    data = get_data(day=17, year=2022)
+    TRILLION = 1_000_000_000_000
+
+    data = get_data(day=17, year=2022).strip()
+    # data = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"
+    N_WIND = len(data)
 
     PIECES = [FlatPiece(), CrossPiece(), ElPiece(), TallPiece(), SquarePiece()]
-    pieces = islice(cycle(PIECES), 0, 1_000_000)
-    # directions = cycle('>>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>')
+    N_PIECES = len(PIECES)
+
+    pieces = cycle(PIECES)
     directions = cycle(data.strip())
 
-    cave = Cave()
-    cave.cascade(pieces, directions)
-    print(f"The top is {cave.top + 1} units above the floor")
+    cave = Cave(n_pieces=N_PIECES, n_wind=N_WIND)
+    height_increase, cycle_length, cycle_start, cycle_start_height = cave.cascade(pieces, enumerate(directions))
+
+    n_total_cycles = (TRILLION - cycle_start) // cycle_length
+    end_of_cycles_height = cycle_start_height + n_total_cycles * height_increase
+    remaining_pieces = TRILLION - cycle_start - n_total_cycles * cycle_length
+    print(f"After all the cycles, the height is {end_of_cycles_height}")
+    print(f"After all the cycles, there are {remaining_pieces} pieces remaining")
+
+    current_height = cave.top
+    cave.cascade(islice(pieces, 0, remaining_pieces), enumerate(directions), check_cycles=False)
+    additional_height = cave.top - current_height
+    print(f"The {remaining_pieces} contribute {additional_height} additional height.")
+    print(f"The top of the cave is {end_of_cycles_height + additional_height} above the floor.")
