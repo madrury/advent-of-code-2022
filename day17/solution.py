@@ -1,9 +1,8 @@
 from aocd import get_data # type: ignore
-from abc import ABC, abstractmethod, abstractproperty
+from abc import abstractproperty
 from dataclasses import dataclass
 from itertools import cycle, islice
-from typing import Tuple, Set, Optional, Iterable, Literal, Dict
-from math import lcm
+from typing import Tuple, Set, Iterable, Literal, Dict
 import numpy as np
 
 Coord = Tuple[int, int]
