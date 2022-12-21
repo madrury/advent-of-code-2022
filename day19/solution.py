@@ -6,7 +6,6 @@ import numpy as np
 import re
 
 PATTERN = r"Blueprint (\d+): Each ore robot costs (\d) ore. Each clay robot costs (\d) ore. Each obsidian robot costs (\d) ore and (\d+) clay. Each geode robot costs (\d) ore and (\d+) obsidian."
-N_ROUNDS = 25
 
 MAX_N_RESOURCES = 500
 MAX_N_ROBOTS = 50
@@ -67,10 +66,10 @@ def print_array_values(vars: ModelVariables):
         )
 
 
-def make_model(blueprint: Blueprint) -> Tuple[cp.Model, ModelVariables]:
-    resources = cp.intvar(0, MAX_N_RESOURCES, shape=(N_ROUNDS, 4), name='resources')
-    robots = cp.intvar(0, MAX_N_ROBOTS, shape=(N_ROUNDS, 4), name='robots')
-    constructions = cp.intvar(0, 1, shape=(N_ROUNDS, 4), name='constructions')
+def make_model(blueprint: Blueprint, n_rounds: int) -> Tuple[cp.Model, ModelVariables]:
+    resources = cp.intvar(0, MAX_N_RESOURCES, shape=(n_rounds, 4), name='resources')
+    robots = cp.intvar(0, MAX_N_ROBOTS, shape=(n_rounds, 4), name='robots')
+    constructions = cp.intvar(0, 1, shape=(n_rounds, 4), name='constructions')
 
     model = cp.Model(maximize=resources[-1, GEODE_IDX])
 
@@ -78,7 +77,7 @@ def make_model(blueprint: Blueprint) -> Tuple[cp.Model, ModelVariables]:
     resources[0, :] = np.array([0, 0, 0, 0])
     robots[0, :] = np.array([1, 0, 0, 0])
 
-    for round in range(1, N_ROUNDS):
+    for round in range(1, n_rounds):
 
         # Can constuct one robot a minute.
         model += (
@@ -147,27 +146,22 @@ if __name__ == '__main__':
     data = get_data(day=19, year=2022).strip()
     blueprints = parse_data(data)
 
-    # blueprint = Blueprint(
-    #     id=1,
-    #     ore=RobotCost(4, 0, 0),
-    #     clay=RobotCost(2, 0, 0),
-    #     obsidian=RobotCost(3, 14, 0),
-    #     geode=RobotCost(3, 0, 7)
-    # )
-    # blueprint = Blueprint(
-    #     id=1,
-    #     ore=RobotCost(2, 0, 0),
-    #     clay=RobotCost(3, 0, 0),
-    #     obsidian=RobotCost(3, 8, 0),
-    #     geode=RobotCost(3, 0, 12)
-    # )
-
     optimals: Dict[BlueprintId, int] = {}
     for blueprint in blueprints:
-        model, vars = make_model(blueprint=blueprint)
+        model, vars = make_model(blueprint=blueprint, n_rounds=25)
         model.solve()
         max_geodes = model.objective_value()
-        print(f"Maximum geodes for blueprint {blueprint.id} is {max_geodes}")
+        # print(f"Maximum geodes for blueprint {blueprint.id} is {max_geodes}")
         optimals[blueprint.id] = max_geodes
     total_quality = sum(id * optim for id, optim in optimals.items())
-    print(f"The total quality of all the blueprints is {total_quality}")
+    print(f"The total quality of all the blueprints over 24 rounds is {total_quality}")
+
+    optimals: List[int] = []
+    for blueprint in blueprints[0:3]:
+        model, vars = make_model(blueprint=blueprint, n_rounds=33)
+        model.solve()
+        max_geodes = model.objective_value()
+        # print(f"Maximum geodes for blueprint {blueprint.id} is {max_geodes}")
+        optimals.append(max_geodes)
+    product_geodes = optimals[0] * optimals[1] * optimals[2]
+    print(f"The product geodes of the first three blueprints over 32 rounds is {product_geodes}")
