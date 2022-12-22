@@ -4,13 +4,11 @@ import numpy as np
 
 DATA_IDX, POSITIONAL_IDX = 0, 1
 
-Idx = int
-
 def parse_data(data: str) -> np.array:
-    return np.array([int(x) for x in data.split('\n')], dtype=object)
+    return np.array([int(x) for x in data.split('\n')])
 
 def stack_idx(data: np.array) -> np.array:
-    return np.vstack([data, np.arange(len(data), dtype=object)])
+    return np.vstack([data, np.arange(len(data))])
 
 def mix(stacked: np.array) -> np.array:
     for idx in range(stacked.shape[1]):
@@ -33,7 +31,6 @@ def grove_coordinates(stacked: np.array) -> int:
     idxofzero = np.where(array == 0)[0][0]
     idxer = (np.array([1000, 2000, 3000]) + idxofzero) % N
     return sum(array[idxer])
-
 
 
 if __name__ == '__main__':
