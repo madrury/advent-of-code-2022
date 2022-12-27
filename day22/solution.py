@@ -102,8 +102,21 @@ class World:
                     for _ in range(n):
                         self.move()
             if show:
+                print(instruction)
+                print(self.player.position)
                 self.show()
                 print()
+                input()
+
+    def password(self) -> int:
+        globalrow = self.squares[self.player.position.sqid].coord[1] + self.player.position.coord[0]
+        globalcol = self.squares[self.player.position.sqid].coord[0] + self.player.position.coord[1]
+        facing = {
+            Facing.RIGHT: 0, Facing.DOWN: 1, Facing.LEFT: 2, Facing.UP: 3
+        }[self.player.facing]
+        print(globalrow, globalcol, facing)
+        return 1000*(globalrow + 1) + 4*(globalcol + 1) + facing
+
 
     def show(self):
         TOKENS = {Terrain.OPEN: '.', Terrain.BLOCKED: '#'}
@@ -112,7 +125,8 @@ class World:
             for row in self.squares[self.player.position.sqid].map
         ]
         ppos = self.player.position.coord
-        thissquare[ppos[0]][ppos[1]] = '@'
+        playertoken = {Facing.UP: '^', Facing.RIGHT: '>', Facing.LEFT: '<', Facing.DOWN: 'v'}[self.player.facing]
+        thissquare[ppos[0]][ppos[1]] = playertoken
         for row in thissquare:
             print(''.join(row))
 
@@ -203,6 +217,20 @@ class World:
             case Terrain.BLOCKED:
                 return self.player.position
 
+def parse_data(data: str) -> Tuple[str, str]:
+    mapdata: List[str] = []
+    instructiondata: str
+
+    readingmap = True
+    for line in data.split('\n'):
+        if line.strip() == '':
+            readingmap = False
+            continue
+        if readingmap:
+            mapdata.append(line)
+        else:
+            instructiondata = line.strip()
+    return '\n'.join(mapdata), instructiondata
 
 ReferencePoints = Dict[SquareId, Coord]
 
@@ -215,7 +243,6 @@ def parse_map_data(data: str, N: int, referencepts: ReferencePoints) -> Dict[Squ
                 LOOKUP[ch] for ch in line[pt[0]:(pt[0] + N)]
             ])
     return squares
-
 
 class Instruction(Enum):
     MOVE = 0
@@ -241,72 +268,91 @@ def parse_instruction_data(data: str) -> List[Instruction]:
 
 
 if __name__ == '__main__':
-    # data = get_data(day=22, year=2022).strip()
-    mapdata = (
-"""        ...#
-        .#..
-        #...
-        ....
-...#.......#
-........#...
-..#....#....
-..........#.
-        ...#....
-        .....#..
-        .#......
-        ......#."""
-    )
+    data = get_data(day=22, year=2022)
+    mapdata, instructiondata = parse_data(data)
 
-    EXAMPLE_REFPTS = {
-        0: (8, 0),
-        1: (0, 4),
-        2: (4, 4),
-        3: (8, 4),
-        4: (8, 8),
-        5: (12, 8)
+    SIDELEN = 50
+    REFPTS = {
+        0: (SIDELEN, 0),
+        1: (2*SIDELEN, 0),
+        2: (SIDELEN, SIDELEN),
+        3: (0, 2*SIDELEN),
+        4: (SIDELEN, 2*SIDELEN),
+        5: (0, 3*SIDELEN)
     }
-
-    EXAMPLE_GLUEING_PATTERN = symmetrize({
-        (0, Side.TOP): (4, Side.BOTTOM, Glueing.MATCHING),
-        (0, Side.LEFT): (0, Side.RIGHT, Glueing.MATCHING),
-        (1, Side.TOP): (1, Side.BOTTOM, Glueing.MATCHING),
-        (1, Side.LEFT): (3, Side.RIGHT, Glueing.MATCHING),
-        (1, Side.LEFT): (3, Side.RIGHT, Glueing.MATCHING),
-        (2, Side.TOP): (2, Side.BOTTOM, Glueing.MATCHING),
-        (2, Side.LEFT): (1, Side.RIGHT, Glueing.MATCHING),
-        (3, Side.TOP): (0, Side.BOTTOM, Glueing.MATCHING),
-        (3, Side.LEFT): (2, Side.RIGHT, Glueing.MATCHING),
-        (4, Side.TOP): (3, Side.BOTTOM, Glueing.MATCHING),
-        (4, Side.LEFT): (5, Side.RIGHT, Glueing.MATCHING),
-        (5, Side.TOP): (5, Side.BOTTOM, Glueing.MATCHING),
-        (5, Side.LEFT): (4, Side.RIGHT, Glueing.MATCHING),
+    GLUEING_PATTERN = symmetrize({
+        (0, Side.TOP):  (4, Side.BOTTOM, Glueing.MATCHING),
+        (0, Side.LEFT): (1, Side.RIGHT, Glueing.MATCHING),
+        (1, Side.TOP):  (1, Side.BOTTOM, Glueing.MATCHING),
+        (1, Side.LEFT): (0, Side.RIGHT, Glueing.MATCHING),
+        (2, Side.TOP):  (0, Side.BOTTOM, Glueing.MATCHING),
+        (2, Side.LEFT): (2, Side.RIGHT, Glueing.MATCHING),
+        (3, Side.TOP):  (5, Side.BOTTOM, Glueing.MATCHING),
+        (3, Side.LEFT): (4, Side.RIGHT, Glueing.MATCHING),
+        (4, Side.TOP):  (2, Side.BOTTOM, Glueing.MATCHING),
+        (4, Side.LEFT): (3, Side.RIGHT, Glueing.MATCHING),
+        (5, Side.TOP):  (3, Side.BOTTOM, Glueing.MATCHING),
+        (5, Side.LEFT): (5, Side.RIGHT, Glueing.MATCHING)
     })
 
-    squares = parse_map_data(mapdata, 4, EXAMPLE_REFPTS)
+    squares = parse_map_data(mapdata, SIDELEN, REFPTS)
     start = Position(0, (0, 0))
-    world = World(squares, EXAMPLE_GLUEING_PATTERN, Player(start, Facing.RIGHT))
+    world = World(squares, GLUEING_PATTERN, Player(start, Facing.RIGHT))
 
-    instructiondata = "10R5L5R10L4R5L5"
     instructions = parse_instruction_data(instructiondata)
-    print(instructions)
 
-    world.execute(instructions, True)
-    # for _ in range(3):
-    #     print(world.player)
-    #     world.show()
-    #     world.move()
-    #     print()
+    world.execute(instructions, False)
+    password = world.password()
+    print(f"The final password in {password}")
 
-    # world.rotate(Rotation.CLOCKWISE)
-    # for _ in range(6):
-    #     print(world.player)
-    #     world.show()
-    #     world.move()
-    #     print()
+#     mapdata = (
+# """        ...#
+#         .#..
+#         #...
+#         ....
+# ...#.......#
+# ........#...
+# ..#....#....
+# ..........#.
+#         ...#....
+#         .....#..
+#         .#......
+#         ......#."""
+#     )
 
-    # world.rotate(Rotation.COUNTERCLOCKWISE)
-    # for _ in range(10):
-    #     print(world.player)
-    #     world.show()
-    #     world.move()
-    #     print()
+#     EXAMPLE_REFPTS = {
+#         0: (8, 0),
+#         1: (0, 4),
+#         2: (4, 4),
+#         3: (8, 4),
+#         4: (8, 8),
+#         5: (12, 8)
+#     }
+
+#     EXAMPLE_FLAT_GLUEING_PATTERN = symmetrize({
+#         (0, Side.TOP): (4, Side.BOTTOM, Glueing.MATCHING),
+#         (0, Side.LEFT): (0, Side.RIGHT, Glueing.MATCHING),
+#         (1, Side.TOP): (1, Side.BOTTOM, Glueing.MATCHING),
+#         (1, Side.LEFT): (3, Side.RIGHT, Glueing.MATCHING),
+#         (1, Side.LEFT): (3, Side.RIGHT, Glueing.MATCHING),
+#         (2, Side.TOP): (2, Side.BOTTOM, Glueing.MATCHING),
+#         (2, Side.LEFT): (1, Side.RIGHT, Glueing.MATCHING),
+#         (3, Side.TOP): (0, Side.BOTTOM, Glueing.MATCHING),
+#         (3, Side.LEFT): (2, Side.RIGHT, Glueing.MATCHING),
+#         (4, Side.TOP): (3, Side.BOTTOM, Glueing.MATCHING),
+#         (4, Side.LEFT): (5, Side.RIGHT, Glueing.MATCHING),
+#         (5, Side.TOP): (5, Side.BOTTOM, Glueing.MATCHING),
+#         (5, Side.LEFT): (4, Side.RIGHT, Glueing.MATCHING),
+#     })
+
+#     squares = parse_map_data(mapdata, 4, EXAMPLE_REFPTS)
+#     start = Position(0, (0, 0))
+#     world = World(squares, EXAMPLE_FLAT_GLUEING_PATTERN, Player(start, Facing.RIGHT))
+
+#     instructiondata = "10R5L5R10L4R5L5"
+#     instructions = parse_instruction_data(instructiondata)
+#     print(instructions)
+
+#     world.execute(instructions, True)
+#     password = world.password()
+#     print(f"The final password in {password}")
