@@ -46,20 +46,12 @@ def symmetrize(d: GlueingPattern) -> GlueingPattern:
         r[(v[0], v[1])] = (k[0], k[1], v[2])
     return r
 
-@dataclass
-class Position:
-    sqid: SquareId
-    coord: LocalCoord
-
-@dataclass
-class Player:
-    position: Position
-    facing: Facing
 
 class Rotation(Enum):
     CLOCKWISE = 0
     COUNTERCLOCKWISE = 1
 
+# Lookup tables for translating rotations into new directions.
 CLOCKWISE_ROTATIONS = {
     Facing.RIGHT: Facing.DOWN,
     Facing.DOWN: Facing.LEFT,
@@ -74,8 +66,21 @@ COUNTERCLOCKWISE_ROTATIONS = {
 }
 
 
-class World:
+@dataclass
+class Position:
+    sqid: SquareId
+    coord: LocalCoord
 
+@dataclass
+class Player:
+    position: Position
+    facing: Facing
+
+
+class World:
+    """The game world. Represented as a bunch of squares glued together at their
+    boundaries.
+    """
     def __init__(
         self,
         squares: Dict[SquareId, Square],
@@ -85,6 +90,20 @@ class World:
         self.squares = squares
         self.pattern = pattern
         self.player = player
+
+    def execute(self, instructions: List['Instruction'], show=False):
+        for instruction in instructions:
+            match instruction:
+                case Instruction.CLOCKWISE:
+                    self.rotate(Rotation.CLOCKWISE)
+                case Instruction.COUNTERCLOCKWISE:
+                    self.rotate(Rotation.COUNTERCLOCKWISE)
+                case Instruction.MOVE, n:
+                    for _ in range(n):
+                        self.move()
+            if show:
+                self.show()
+                print()
 
     def show(self):
         TOKENS = {Terrain.OPEN: '.', Terrain.BLOCKED: '#'}
@@ -144,7 +163,6 @@ class World:
                 newsid, newside, glue = self.pattern[self.player.position.sqid, Side.TOP]
             case Facing.DOWN:
                 newsid, newside, glue = self.pattern[self.player.position.sqid, Side.BOTTOM]
-        print("Switching squares: ", newsid, newside, glue)
         return self._new_square_move(
             self.player.position.coord,
             self.player.facing,
@@ -186,14 +204,9 @@ class World:
                 return self.player.position
 
 
-
-
-
-
-
 ReferencePoints = Dict[SquareId, Coord]
 
-def parse_data(data: str, N: int, referencepts: ReferencePoints) -> Dict[SquareId, Square]:
+def parse_map_data(data: str, N: int, referencepts: ReferencePoints) -> Dict[SquareId, Square]:
     LOOKUP = {'.': Terrain.OPEN, '#': Terrain.BLOCKED}
     squares = {id: Square(id, pt, N, []) for id, pt in referencepts.items()}
     for (n, line), (id, pt) in product(enumerate(data.split('\n')), referencepts.items()):
@@ -204,10 +217,32 @@ def parse_data(data: str, N: int, referencepts: ReferencePoints) -> Dict[SquareI
     return squares
 
 
+class Instruction(Enum):
+    MOVE = 0
+    CLOCKWISE = 1
+    COUNTERCLOCKWISE = 2
+
+def parse_instruction_data(data: str) -> List[Instruction]:
+    buffer: List[str] = []
+    instructions: List[Instruction] = []
+    for chr in data:
+        if chr in {'R', 'L'}:
+            if buffer:
+                instructions.append((Instruction.MOVE, int(''.join(buffer))))
+                buffer = []
+            instructions.append(
+                {'R': Instruction.CLOCKWISE, 'L': Instruction.COUNTERCLOCKWISE}[chr]
+            )
+        else:
+            buffer.append(chr)
+    if buffer:
+        instructions.append((Instruction.MOVE, int(''.join(buffer))))
+    return instructions
+
 
 if __name__ == '__main__':
     # data = get_data(day=22, year=2022).strip()
-    data = (
+    mapdata = (
 """        ...#
         .#..
         #...
@@ -221,6 +256,7 @@ if __name__ == '__main__':
         .#......
         ......#."""
     )
+
     EXAMPLE_REFPTS = {
         0: (8, 0),
         1: (0, 4),
@@ -246,10 +282,15 @@ if __name__ == '__main__':
         (5, Side.LEFT): (4, Side.RIGHT, Glueing.MATCHING),
     })
 
-    squares = parse_data(data, 4, EXAMPLE_REFPTS)
+    squares = parse_map_data(mapdata, 4, EXAMPLE_REFPTS)
     start = Position(0, (0, 0))
     world = World(squares, EXAMPLE_GLUEING_PATTERN, Player(start, Facing.RIGHT))
 
+    instructiondata = "10R5L5R10L4R5L5"
+    instructions = parse_instruction_data(instructiondata)
+    print(instructions)
+
+    world.execute(instructions, True)
     # for _ in range(3):
     #     print(world.player)
     #     world.show()
