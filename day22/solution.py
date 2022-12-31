@@ -1,5 +1,5 @@
 from aocd import get_data  # type: ignore
-from typing import List, Tuple, Dict, Callable, Optional, Literal
+from typing import List, Tuple, Dict
 from itertools import product
 from dataclasses import dataclass
 from enum import Enum
