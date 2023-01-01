@@ -153,14 +153,8 @@ def thereandthenbackandthenthereagain(
     return n_there + n_back + n_thereagain
 
 
-
-
-
-
-
 if __name__ == "__main__":
     data = get_data(day=24, year=2022)
-
 
     NROW, NCOL = 35, 100
 
